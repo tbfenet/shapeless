@@ -130,6 +130,96 @@ class RecordTests {
   }
 
   @Test
+  def testFromMap {
+    import record._
+    import test._
+
+    type T1 = Record.`'stringVal -> String,'intVal->Int,'boolVal->Boolean`.T
+
+    val in = Map('intVal -> 4, 'stringVal -> "Blarr", 'boolVal -> true)
+
+    import syntax.std.maps._
+
+    val recEither = in.toRecord[T1]
+
+    assert(recEither.isRight, s"Got left:${recEither.left.get}")
+
+    val rec: T1 = recEither.right.get
+
+    typed[T1](rec)
+
+    assert(rec('stringVal) == "Blarr", "stringVal mismatch")
+    assert(rec('intVal) == 4, "int val mismatch")
+    assert(rec('boolVal), "Boolean val match")
+
+    val in2 = Map('intVal -> 4, 'stringVal -> "Blarr")
+
+    val recEither2 = in2.toRecord[T1]
+
+    assert(recEither2.isLeft, "Is not left")
+
+    assert(recEither2.left.get.contains("boolVal"), recEither2.left.get)
+  }
+
+  @Test
+  def testFromMap2 {
+    import test._
+
+    type T = FieldType[intField1.type, Int] :: FieldType[stringField1.type, String] :: FieldType[boolField1.type, Boolean] :: FieldType[doubleField1.type, Double] :: HNil
+
+
+    val in = Map(intField1 -> 4, stringField1 -> "Blarr", boolField1 -> true, doubleField1 -> 5.0)
+
+    import syntax.std.maps._
+
+    val recEither = in.toRecord[T]
+
+    assert(recEither.isRight, s"Got left:${recEither.left.get}")
+
+    val rec: T = recEither.right.get
+
+    typed[T](rec)
+
+    assert(rec(intField1) == 4)
+    assert(rec(stringField1) == "Blarr")
+    assert(rec(doubleField1) == 5.0)
+  }
+
+  @Test
+  def testNestedFromMap {
+    import record._
+    import test._
+
+    type TN = Record.`'stringVal -> String,'intVal->Int,'boolVal->Boolean`.T
+    type T1 = Record.`'nestedVal -> TN,'intVal->Int,'boolVal->Boolean`.T
+
+    val in = Map('intVal -> 4,
+      'nestedVal -> Map('intVal -> 4, 'stringVal -> "Hi", 'boolVal -> false), 'boolVal -> true)
+
+    import syntax.std.maps._
+
+    val recEither = in.toRecord[T1]
+
+    assert(recEither.isRight, s"Got left:${recEither.left.get}")
+
+    val rec: T1 = recEither.right.get
+
+    typed[T1](rec)
+
+    val recNested: TN = rec('nestedVal)
+
+
+    typed[TN](recNested)
+
+    assert(rec('intVal) == 4, "int val mismatch")
+    assert(rec('boolVal), "Boolean val match")
+
+    assert(recNested('stringVal) == "Hi", "stringVal mismatch")
+    assert(recNested('intVal) == 4, "int val mismatch")
+    assert(!recNested('boolVal), "Boolean val match")
+  }
+
+  @Test
   def testAtLiterals {
     val r1 =
       ("intField1"    ->>    23) ::
