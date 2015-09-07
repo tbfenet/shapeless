@@ -33,12 +33,11 @@ object maps {
 final class MapOps[T <: Map[_ <: Any, Any]](t: T) {
   /**
    * Extracts value from map to form Record L. Map must contain all the keys and the values
-   * and of the correct types. Supports nessted records where the value in the map has to
-   * be a nested Map
+   * and of the correct types.
    * @param fl
    * @tparam L
-   * @return Either Right[L] with values from Map or Left[error message]
+   * @return Some[L] with values from Map or None if map does not match L
    */
-  def toRecord[L <: HList](implicit fl: FromMap[L]): Either[String, L] = fl(
+  def toRecord[L <: HList](implicit fl: FromMap[L]): Option[ L] = fl(
     t.asInstanceOf[Map[Any, Any]])
 }

@@ -140,11 +140,11 @@ class RecordTests {
 
     import syntax.std.maps._
 
-    val recEither = in.toRecord[T1]
+    val recOption = in.toRecord[T1]
 
-    assert(recEither.isRight, s"Got left:${recEither.left.get}")
+    assert(recOption.isDefined)
 
-    val rec: T1 = recEither.right.get
+    val rec: T1 = recOption.get
 
     typed[T1](rec)
 
@@ -156,9 +156,9 @@ class RecordTests {
 
     val recEither2 = in2.toRecord[T1]
 
-    assert(recEither2.isLeft, "Is not left")
+    assert(recEither2.isEmpty)
 
-    assert(recEither2.left.get.contains("boolVal"), recEither2.left.get)
+
   }
 
   @Test
@@ -172,11 +172,11 @@ class RecordTests {
 
     import syntax.std.maps._
 
-    val recEither = in.toRecord[T]
+    val recOption = in.toRecord[T]
 
-    assert(recEither.isRight, s"Got left:${recEither.left.get}")
+    assert(recOption.isDefined)
 
-    val rec: T = recEither.right.get
+    val rec: T = recOption.get
 
     typed[T](rec)
 
@@ -185,39 +185,6 @@ class RecordTests {
     assert(rec(doubleField1) == 5.0)
   }
 
-  @Test
-  def testNestedFromMap {
-    import record._
-    import test._
-
-    type TN = Record.`'stringVal -> String,'intVal->Int,'boolVal->Boolean`.T
-    type T1 = Record.`'nestedVal -> TN,'intVal->Int,'boolVal->Boolean`.T
-
-    val in = Map('intVal -> 4,
-      'nestedVal -> Map('intVal -> 4, 'stringVal -> "Hi", 'boolVal -> false), 'boolVal -> true)
-
-    import syntax.std.maps._
-
-    val recEither = in.toRecord[T1]
-
-    assert(recEither.isRight, s"Got left:${recEither.left.get}")
-
-    val rec: T1 = recEither.right.get
-
-    typed[T1](rec)
-
-    val recNested: TN = rec('nestedVal)
-
-
-    typed[TN](recNested)
-
-    assert(rec('intVal) == 4, "int val mismatch")
-    assert(rec('boolVal), "Boolean val match")
-
-    assert(recNested('stringVal) == "Hi", "stringVal mismatch")
-    assert(recNested('intVal) == 4, "int val mismatch")
-    assert(!recNested('boolVal), "Boolean val match")
-  }
 
   @Test
   def testAtLiterals {

@@ -27,7 +27,7 @@ object maps {
    *
    */
   trait FromMap[Out <: HList] extends Serializable {
-    def apply(l: Map[Any, Any]): Either[String, Out]
+    def apply(l: Map[Any, Any]): Option[Out]
   }
 
   /**
@@ -41,59 +41,24 @@ object maps {
 
     implicit def hnilFromMap[T] = new FromMap[HNil] {
 
-      override def apply(l: Map[Any, Any]) = Right(HNil)
+      override def apply(l: Map[Any, Any]) = Some(HNil)
     }
 
     import labelled._
 
-    implicit def hlistNesstedFromMap[K, V <: HList, OutT <: HList](implicit flt: FromMap[OutT],
-                                                                   fm: FromMap[V],
-                                                                   wit: Witness.Aux[K]) = new
+    implicit def hlistFromMap[K, V, OutT <: HList](implicit flt: FromMap[OutT], oc: Typeable[V],
+                                                   wit: Witness.Aux[K]) = new
         FromMap[FieldType[K, V] :: OutT] {
 
-      def apply(mm: Map[Any, Any]): Either[String, FieldType[K, V] :: OutT] = {
+      import labelled._
+
+      def apply(mm: Map[Any, Any]): Option[FieldType[K, V] :: OutT] = {
 
         val key = wit.value
-        import labelled._
-        val value = mm.get(key)
-        if (value.isEmpty) {
-          Left(s"No entry of ${key} in ${mm}")
-        } else {
-          value.get match {
-            case x: Map[_, _] =>
 
-              for {h <- fm(x.asInstanceOf[Map[Any, Any]]).right
-                   t <- flt(mm).right} yield field[K](h) :: t
-            case x: Any =>
-              Left(s"Expected Map[Any,Any] got ${x.getClass}")
-          }
-        }
-      }
-    }
-  }
-
-  implicit def hlistFromMap[K, V, OutT <: HList](implicit flt: FromMap[OutT], oc: Typeable[V],
-                                                 wit: Witness.Aux[K]) = new
-      FromMap[FieldType[K, V] :: OutT] {
-
-    import labelled._
-
-    def apply(mm: Map[Any, Any]): Either[String, FieldType[K, V] :: OutT] = {
-
-      val key = wit.value
-
-
-      val value = mm.get(key)
-      if (value.isEmpty) {
-        Left(s"No entry of ${key} in ${mm}")
-      } else {
-        val typed = oc.cast(value.get)
-        if (typed.isEmpty) {
-          Left(
-            s"Can't convert ${value.get} of class ${value.get.getClass.getName} to ${oc.describe}")
-        } else {
-          flt(mm).right.map(t => (field[K](typed.get)) :: t)
-        }
+        for {value <- mm.get(key)
+             typed <- oc.cast(value)
+             rest <- flt(mm)} yield field[K](typed) :: rest
       }
     }
   }
